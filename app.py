@@ -1,10 +1,10 @@
-# app.py
 from flask import Flask, request, render_template_string
 import random
 import operator
 
 app = Flask(__name__)
 
+# Define available operators
 operators = {
     operator.add: '+',
     operator.sub: '-',
@@ -12,50 +12,62 @@ operators = {
     operator.truediv: '/'
 }
 
-@app.route("/", methods=["GET", "POST"])
-def math_quiz():
-    if request.method == "POST":
-        try:
-            num_questions = int(request.form["num_questions"])
-            difficulty = request.form["difficulty"].lower()
-        except ValueError:
-            return "Invalid input. Please enter a number for questions."
+# Simple HTML Template
+quiz_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz</title>
+</head>
+<body>
+    <h1>Math Quiz</h1>
+    <form method="post">
+        <label>Number of Questions:</label><br>
+        <input type="number" name="num_questions" required><br><br>
 
-        questions = []
-        for _ in range(num_questions):
+        <label>Difficulty (Easy/Medium/Hard):</label><br>
+        <input type="text" name="difficulty" required><br><br>
+
+        <button type="submit">Start Quiz</button>
+    </form>
+
+    {% if questions %}
+        <h2>Quiz Questions:</h2>
+        <ul>
+            {% for q in questions %}
+                <li>{{ q }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>
+"""
+
+@app.route('/', methods=['GET', 'POST'])
+def math_quiz():
+    questions = []
+    if request.method == 'POST':
+        num_questions = int(request.form.get('num_questions'))
+        difficulty = request.form.get('difficulty').lower()
+
+        for i in range(num_questions):
             num1 = random.randint(1, 10)
             num2 = random.randint(1, 10)
 
             if difficulty == 'easy':
                 num1 = random.randint(1, 5)
                 num2 = random.randint(1, 5)
+            elif difficulty == 'hard':
+                num1 = random.randint(1, 20)
+                num2 = random.randint(1, 20)
 
             op = random.choice(list(operators.keys()))
-            question = f"{num1} {operators[op]} {num2}"
-            answer = round(op(num1, num2), 2)  # rounding for division
-            questions.append((question, answer))
+            question = f"Question {i + 1}: {num1} {operators[op]} {num2} = ?"
+            questions.append(question)
 
-        return render_template_string("""
-            <h2>Answer the following questions:</h2>
-            <form method="post" action="/">
-                {% for i, (question, answer) in enumerate(questions) %}
-                    <label>Q{{ i + 1 }}: {{ question }} = </label>
-                    <input type="text" name="answer{{ i }}">
-                    <input type="hidden" name="correct{{ i }}" value="{{ answer }}">
-                    <br><br>
-                {% endfor %}
-                <input type="submit" value="Submit Answers">
-            </form>
-        """, questions=questions)
-
-    return '''
-        <h2>Math Quiz Generator</h2>
-        <form method="post" action="/">
-            Number of Questions: <input type="text" name="num_questions"><br>
-            Difficulty (Easy/Medium/Hard): <input type="text" name="difficulty"><br>
-            <input type="submit" value="Start Quiz">
-        </form>
-    '''
+    return render_template_string(quiz_template, questions=questions)
 
 if __name__ == "__main__":
     app.run(debug=True)
